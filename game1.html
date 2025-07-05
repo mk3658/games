@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Flappy Bird</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #87CEEB 0%, #98FB98 100%);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: linear-gradient(180deg, #87CEEB 0%, #90EE90 100%);
+            border: 4px solid #333;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+        
+        canvas {
+            display: block;
+            background: transparent;
+            pointer-events: none;
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(255, 255, 255, 0.8);
+        }
+        
+        .speed-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .flower-legend {
+            position: absolute;
+            top: 130px;
+            left: 20px;
+            font-size: 12px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(5px);
+        }
+        
+        .flower-legend div {
+            margin: 2px 0;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .flower-sample {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .flower-sample.small { background: linear-gradient(45deg, #FFB6C1, #FF69B4); }
+        .flower-sample.medium { background: linear-gradient(45deg, #FF1493, #DC143C); }
+        .flower-sample.large { background: linear-gradient(45deg, #8A2BE2, #4B0082); }
+        
+        .voice-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        .voice-indicator.active {
+            background: rgba(255, 100, 100, 0.8);
+            border-color: rgba(255, 100, 100, 1);
+            transform: scale(1.2);
+            box-shadow: 0 0 20px rgba(255, 100, 100, 0.6);
+        }
+        
+        .start-screen, .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: all;
+            z-index: 20;
+        }
+        
+        .start-screen h1, .game-over-screen h1 {
+            font-size: 48px;
+            margin: 0 0 20px 0;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+        }
+        
+        .start-screen p, .game-over-screen p {
+            font-size: 18px;
+            margin: 10px 0;
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        .instruction {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .instruction-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            pointer-events: all;
+        }
+        
+        .instruction-content {
+            background: rgba(255, 255, 255, 0.95);
+            color: #333;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            margin: 20px;
+            border: 3px solid #4ECDC4;
+            position: relative;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            margin: 0;
+            width: auto;
+            height: auto;
+            border-radius: 0;
+            box-shadow: none;
+            text-transform: none;
+            letter-spacing: normal;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .flower-types {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(76, 175, 80, 0.1);
+            border-radius: 10px;
+        }
+        
+        .flower-type {
+            text-align: center;
+            padding: 5px;
+        }
+        
+        .flower-type .flower-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 0 auto 5px;
+        }
+        
+        .flower-type.small .flower-icon { background: linear-gradient(45deg, #FFB6C1, #FF69B4); }
+        .flower-type.medium .flower-icon { background: linear-gradient(45deg, #FF1493, #DC143C); }
+        .flower-type.large .flower-icon { background: linear-gradient(45deg, #8A2BE2, #4B0082); }
+        
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .help-btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            margin: 5px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .high-score {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            font-size: 16px;
+            color: #666;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+        }
+        
+        .lifetime-bar {
+            position: absolute;
+            top: 60px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #333;
+        }
+        
+        .lifetime-label {
+            margin-right: 8px;
+            font-weight: bold;
+        }
+        
+        .lifetime-container {
+            width: 120px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-right: 8px;
+        }
+        
+        .lifetime-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4757 0%, #ffa502 50%, #2ed573 100%);
+            transition: width 0.3s ease;
+            width: 100%;
+        }
+        
+        .lifetime-text {
+            font-weight: bold;
+            min-width: 35px;
+        }
+        
+        .voice-commands {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #333;
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .waiting-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+            border: 2px solid #4ECDC4;
+        }
+        
+        .clouds {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 20"><circle cx="20" cy="10" r="8" fill="white" opacity="0.3"/><circle cx="30" cy="10" r="6" fill="white" opacity="0.2"/><circle cx="70" cy="10" r="10" fill="white" opacity="0.25"/></svg>') repeat-x;
+            animation: drift 20s linear infinite;
+        }
+        
+        @keyframes drift {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100px); }
+        }
+        
+        .pulse {
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .score-popup {
+            position: absolute;
+            font-size: 20px;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            z-index: 15;
+            animation: scorePopup 1s ease-out forwards;
+        }
+        
+        @keyframes scorePopup {
+            0% { transform: scale(0.5) translateY(0); opacity: 1; }
+            50% { transform: scale(1.2) translateY(-20px); opacity: 1; }
+            100% { transform: scale(1) translateY(-40px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="clouds"></div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="ui-overlay" id="ui">
+            <div class="score">Score: <span id="scoreValue">0</span></div>
+            <div class="speed-display" id="speedDisplay">Speed: 1.0x</div>
+            <div class="flower-legend">
+                <div><span class="flower-sample small"></span> Small: 1pt</div>
+                <div><span class="flower-sample medium"></span> Medium: 3pts</div>
+                <div><span class="flower-sample large"></span> Large: 5pts</div>
+            </div>
+            <div class="lifetime-bar">
+                <div class="lifetime-label">Energy:</div>
+                <div class="lifetime-container">
+                    <div class="lifetime-fill" id="lifetimeFill"></div>
+                </div>
+                <div class="lifetime-text" id="lifetimeText">100%</div>
+            </div>
+            <div class="high-score">Best: <span id="highScoreValue">0</span></div>
+            <div class="voice-indicator" id="voiceIndicator">🎤</div>
+            <div class="voice-commands" id="voiceCommands">Click anywhere to fly!</div>
+            <div class="waiting-indicator hidden" id="waitingIndicator">Click anywhere to start!</div>
+        </div>
+        
+        <div class="start-screen" id="startScreen">
+            <h2 style="font-size: 35px;">🐦 Voice Flappy Bird</h2>
+            <p>Navigate through obstacles and collect flowers!</p>
+            <div style="margin: 5px;">
+                <button onclick="game.startGame(false)">🎮 Play with Click</button>
+            </div>
+            <div style="margin: 5px;">
+                <button onclick="game.startGame(true)">🎤 Play with Voice</button>
+            </div>
+            <button class="help-btn" onclick="game.showInstructions()">❓ How to Play</button>
+        </div>
+        
+        <div class="instruction-modal hidden" id="instructionModal">
+            <div class="instruction-content">
+                <button class="close-btn" onclick="game.hideInstructions()">×</button>
+                <h2>🐦 How to Play</h2>
+                <p><strong>Controls:</strong></p>
+                <ul>
+                    <li><strong>CLICK ANYWHERE</strong> to make the bird fly up</li>
+                    <li>Or say "Ta" if you enable voice control</li>
+                    <li>Use spacebar as backup control</li>
+                </ul>
+                
+                <p><strong>Gameplay:</strong></p>
+                <ul>
+                    <li>Bird's energy drains slowly over time</li>
+                    <li>Collect flowers to restore energy and score points</li>
+                    <li>Navigate around dark obstacles carefully</li>
+                    <li>Don't touch obstacles or the ground</li>
+                    <li>Speed increases as you progress</li>
+                </ul>
+                
+                <p><strong>Flower Types:</strong></p>
+                <div class="flower-types">
+                    <div class="flower-type small">
+                        <div class="flower-icon"></div>
+                        <div>Small<br>1 Point<br>3 Energy</div>
+                    </div>
+                    <div class="flower-type medium">
+                        <div class="flower-icon"></div>
+                        <div>Medium<br>3 Points<br>6 Energy</div>
+                    </div>
+                    <div class="flower-type large">
+                        <div class="flower-icon"></div>
+                        <div>Large<br>5 Points<br>10 Energy</div>
+                    </div>
+                </div>
+                
+                <p><strong>Tips:</strong></p>
+                <ul>
+                    <li>Larger flowers give more points and energy</li>
+                    <li>Plan your route to collect flowers efficiently</li>
+                    <li>Keep an eye on your energy bar</li>
+                    <li>Voice control can be more responsive than clicking</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="game-over-screen hidden" id="gameOverScreen">
+            <h1>Game Over!</h1>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <p>Max Speed: <span id="maxSpeed">1.0x</span></p>
+            <p id="newRecord" class="hidden">🎉 New High Score!</p>
+            <div class="audio-playback" id="audioPlayback" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 2px solid rgba(255,255,255,0.3);">
+                <p style="margin: 10px 0;">🎵 Listen to your voice commands from this game:</p>
+                <button onclick="game.playGameAudio()" id="playAudioBtn" class="play-btn" style="background: linear-gradient(45deg, #48dbfb, #0abde3); margin: 5px;">▶️ Play Recording</button>
+                <button onclick="game.downloadGameAudio()" id="downloadAudioBtn" class="play-btn" style="background: linear-gradient(45deg, #feca57, #ff9ff3); margin: 5px;">⬇️ Download</button>
+            </div>
+            <button onclick="game.restartGame()">🔄 Play Again</button>
+            <button onclick="game.showStartScreen()">📋 Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        class VoiceFlappyBird {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gameContainer = document.getElementById('gameContainer');
+                this.audioContext = null;
+                this.analyser = null;
+                this.microphone = null;
+                this.dataArray = null;
+                this.isListening = false;
+                this.voiceThreshold = 60;
+                this.voiceDetected = false;
+                this.lastVoiceTime = 0;
+                this.voiceCooldown = 300; // Minimum time between voice commands (ms)
+                
+                // Audio recording for playback
+                this.mediaRecorder = null;
+                this.audioChunks = [];
+                this.gameAudioBlob = null;
+                this.isRecording = false;
+                
+                // Game state
+                this.gameState = 'menu'; // menu, playing, gameOver
+                this.waitingForFirstInput = false; // New state to track if we're waiting
+                this.useVoiceControl = false;
+                this.score = 0;
+                this.obstaclesPassed = 0; // Track obstacles passed for speed progression
+                this.currentSpeedMultiplier = 1.0;
+                this.maxSpeedReached = 1.0;
+                this.highScore = localStorage.getItem('voiceFlappyHighScore') || 0;
+                this.animationId = null;
+                
+                // Bird properties
+                this.bird = {
+                    x: 100,
+                    y: 300,
+                    width: 40,
+                    height: 30,
+                    velocity: 0,
+                    gravity: 0.1, // Decreased from 0.6 (40% slower drop)
+                    jumpForce: -5, // Increased from -12 (30% higher flight)
+                    rotation: 0,
+                    lifetime: 100, // Bird's energy/lifetime (0-100)
+                    maxLifetime: 100,
+                    lifetimeDrain: 0.03 // Decreased from 0.15 (20% slower drain)
+                };
+                
+                // Bottom obstacles and top flowers
+                this.obstacles = [];
+                this.flowers = [];
+                this.obstacleWidth = 80;
+                this.baseElementSpeed = 3.5; // Base speed - will be modified by speed multiplier
+                this.lastElementTime = 0;
+                this.elementInterval = 2500; // 2.5 seconds
+                
+                // Flower types with different properties
+                this.flowerTypes = {
+                    small: { size: 20, points: 1, probability: 0.5, energy: 3 },
+                    medium: { size: 30, points: 3, probability: 0.3, energy: 6 },
+                    large: { size: 40, points: 5, probability: 0.2, energy: 10 }
+                };
+                
+                // UI elements
+                this.elements = {
+                    startScreen: document.getElementById('startScreen'),
+                    gameOverScreen: document.getElementById('gameOverScreen'),
+                    instructionModal: document.getElementById('instructionModal'),
+                    scoreValue: document.getElementById('scoreValue'),
+                    speedDisplay: document.getElementById('speedDisplay'),
+                    highScoreValue: document.getElementById('highScoreValue'),
+                    finalScore: document.getElementById('finalScore'),
+                    maxSpeed: document.getElementById('maxSpeed'),
+                    newRecord: document.getElementById('newRecord'),
+                    voiceIndicator: document.getElementById('voiceIndicator'),
+                    voiceCommands: document.getElementById('voiceCommands'),
+                    waitingIndicator: document.getElementById('waitingIndicator'),
+                    audioPlayback: document.getElementById('audioPlayback'),
+                    playAudioBtn: document.getElementById('playAudioBtn'),
+                    downloadAudioBtn: document.getElementById('downloadAudioBtn'),
+                    lifetimeFill: document.getElementById('lifetimeFill'),
+                    lifetimeText: document.getElementById('lifetimeText')
+                };
+                
+                this.updateHighScore();
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                // Click anywhere in game container to fly
+                this.gameContainer.addEventListener('click', (e) => {
+                    // Only handle clicks if we're playing AND not clicking on buttons/UI elements
+                    if (this.gameState === 'playing' && !this.isClickOnUIElement(e)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.handleFirstInput();
+                        this.birdJump();
+                    }
+                });
+                
+                // Touch anywhere in game container to fly
+                this.gameContainer.addEventListener('touchstart', (e) => {
+                    // Only handle touches if we're playing AND not touching buttons/UI elements
+                    if (this.gameState === 'playing' && !this.isTouchOnUIElement(e)) {
+                        e.preventDefault();
+                        this.handleFirstInput();
+                        this.birdJump();
+                    }
+                });
+                
+                // Keyboard controls (spacebar as backup)
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space' && this.gameState === 'playing') {
+                        e.preventDefault();
+                        this.handleFirstInput();
+                        this.birdJump();
+                    }
+                    
+                    // Close instructions with Escape key
+                    if (e.code === 'Escape') {
+                        this.hideInstructions();
+                    }
+                });
+            }
+            
+            // Check if click/touch is on a UI element (button, etc.)
+            isClickOnUIElement(event) {
+                const target = event.target;
+                return target.tagName === 'BUTTON' || 
+                       target.closest('button') || 
+                       target.closest('.start-screen') || 
+                       target.closest('.game-over-screen') ||
+                       target.closest('.instruction-modal');
+            }
+            
+            // Check if touch is on a UI element (button, etc.)
+            isTouchOnUIElement(event) {
+                const target = event.target;
+                return target.tagName === 'BUTTON' || 
+                       target.closest('button') || 
+                       target.closest('.start-screen') || 
+                       target.closest('.game-over-screen') ||
+                       target.closest('.instruction-modal');
+            }
+            
+            showInstructions() {
+                this.elements.instructionModal.classList.remove('hidden');
+            }
+            
+            hideInstructions() {
+                this.elements.instructionModal.classList.add('hidden');
+            }
+            
+            handleFirstInput() {
+                if (this.waitingForFirstInput) {
+                    this.waitingForFirstInput = false;
+                    this.elements.waitingIndicator.classList.add('hidden');
+                    // Start the element spawning timer from now
+                    this.lastElementTime = Date.now();
+                }
+            }
+            
+            // Calculate current speed based on obstacles passed
+            calculateSpeed() {
+                // Increase speed every 3 obstacles passed, max 2.5x speed
+                const speedIncrease = Math.floor(this.obstaclesPassed / 3) * 0.2;
+                this.currentSpeedMultiplier = Math.min(1.0 + speedIncrease, 2.5);
+                
+                // Track max speed reached
+                if (this.currentSpeedMultiplier > this.maxSpeedReached) {
+                    this.maxSpeedReached = this.currentSpeedMultiplier;
+                }
+                
+                // Update speed display
+                this.elements.speedDisplay.textContent = `Speed: ${this.currentSpeedMultiplier.toFixed(1)}x`;
+            }
+            
+            async startGame(enableVoice = false) {
+                this.useVoiceControl = enableVoice;
+                
+                if (enableVoice) {
+                    try {
+                        // Request microphone access for voice control
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        this.analyser = this.audioContext.createAnalyser();
+                        this.microphone = this.audioContext.createMediaStreamSource(stream);
+                        this.microphone.connect(this.analyser);
+                        
+                        this.analyser.fftSize = 256;
+                        this.analyser.smoothingTimeConstant = 0.3;
+                        this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                        
+                        // Start recording for playback
+                        this.startAudioRecording(stream);
+                        
+                        this.isListening = true;
+                        this.elements.voiceCommands.textContent = 'Say "Ta" or click anywhere to fly!';
+                        this.elements.voiceIndicator.style.display = 'flex';
+                        this.elements.waitingIndicator.textContent = 'Make your first sound or click to start!';
+                        
+                    } catch (error) {
+                        console.error('Microphone access denied:', error);
+                        alert('Microphone access denied. Switching to click controls.');
+                        this.useVoiceControl = false;
+                    }
+                }
+                
+                if (!this.useVoiceControl) {
+                    this.elements.voiceCommands.textContent = 'Click anywhere to fly!';
+                    this.elements.voiceIndicator.style.display = 'none';
+                    this.elements.waitingIndicator.textContent = 'Click anywhere to start!';
+                }
+                
+                this.gameState = 'playing';
+                this.waitingForFirstInput = true; // Set waiting state
+                this.resetGame();
+                this.elements.startScreen.classList.add('hidden');
+                this.elements.waitingIndicator.classList.remove('hidden'); // Show waiting indicator
+                this.startGameLoop();
+            }
+            
+            resetGame() {
+                this.score = 0;
+                this.obstaclesPassed = 0;
+                this.currentSpeedMultiplier = 1.0;
+                this.maxSpeedReached = 1.0;
+                this.bird.y = 300;
+                this.bird.velocity = 0;
+                this.bird.rotation = 0;
+                this.bird.lifetime = this.bird.maxLifetime; // Reset lifetime to full
+                this.obstacles = [];
+                this.flowers = [];
+                this.lastElementTime = 0; // Will be set when first input is received
+                this.lastVoiceTime = 0;
+                this.updateScore();
+                this.updateLifetimeDisplay();
+                this.calculateSpeed();
+                
+                // Reset audio recording
+                this.audioChunks = [];
+                this.gameAudioBlob = null;
+            }
+            
+            startGameLoop() {
+                const gameLoop = () => {
+                    if (this.gameState === 'playing') {
+                        this.update();
+                        this.draw();
+                        this.animationId = requestAnimationFrame(gameLoop);
+                    }
+                };
+                gameLoop();
+            }
+            
+            update() {
+                this.processVoiceInput();
+                
+                // Only update bird physics and elements if we're not waiting for first input
+                if (!this.waitingForFirstInput) {
+                    this.updateBird();
+                    this.updateBirdLifetime();
+                    this.updateElements();
+                    this.checkCollisions();
+                    this.spawnElements();
+                } else {
+                    // When waiting, keep the bird floating gently
+                    const time = Date.now() * 0.003;
+                    this.bird.y = 300 + Math.sin(time) * 3; // Gentle floating motion
+                    this.bird.rotation = Math.sin(time * 0.8) * 0.1; // Slight rotation
+                }
+            }
+            
+            processVoiceInput() {
+                if (!this.useVoiceControl || !this.isListening || !this.analyser) return;
+                
+                this.analyser.getByteFrequencyData(this.dataArray);
+                
+                // Calculate average volume
+                const average = this.dataArray.reduce((sum, value) => sum + value, 0) / this.dataArray.length;
+                
+                // Detect single "Ta" sound
+                const currentTime = Date.now();
+                const isVoiceActive = average > this.voiceThreshold;
+                
+                if (isVoiceActive && !this.voiceDetected && currentTime - this.lastVoiceTime > this.voiceCooldown) {
+                    this.voiceDetected = true;
+                    this.lastVoiceTime = currentTime;
+                    
+                    // Handle first input if we're waiting
+                    this.handleFirstInput();
+                    
+                    // Single "Ta" triggers bird jump
+                    this.birdJump();
+                    this.elements.voiceIndicator.classList.add('pulse');
+                    setTimeout(() => {
+                        this.elements.voiceIndicator.classList.remove('pulse');
+                    }, 500);
+                    
+                    this.elements.voiceIndicator.classList.add('active');
+                } else if (!isVoiceActive && this.voiceDetected) {
+                    this.voiceDetected = false;
+                    this.elements.voiceIndicator.classList.remove('active');
+                }
+            }
+            
+            birdJump() {
+                this.bird.velocity = this.bird.jumpForce;
+                this.bird.rotation = -0.3;
+            }
+            
+            updateBird() {
+                this.bird.velocity += this.bird.gravity;
+                this.bird.y += this.bird.velocity;
+                
+                // Rotation based on velocity
+                this.bird.rotation = Math.min(Math.max(this.bird.velocity * 0.05, -0.5), 0.5);
+                
+                // Keep bird in bounds
+                if (this.bird.y < 0) {
+                    this.bird.y = 0;
+                    this.bird.velocity = 0;
+                }
+                
+                // Check if bird hits the ground
+                if (this.bird.y > this.canvas.height - this.bird.height - 20) { // 20px for ground
+                    this.gameOver();
+                }
+            }
+            
+            updateBirdLifetime() {
+                // Decrease lifetime over time
+                this.bird.lifetime -= this.bird.lifetimeDrain;
+                
+                // Game over if lifetime reaches 0
+                if (this.bird.lifetime <= 0) {
+                    this.bird.lifetime = 0;
+                    this.gameOver();
+                }
+                
+                this.updateLifetimeDisplay();
+            }
+            
+            updateElements() {
+                const currentSpeed = this.baseElementSpeed * this.currentSpeedMultiplier;
+                
+                // Update obstacles
+                this.obstacles.forEach(obstacle => {
+                    obstacle.x -= currentSpeed;
+                    
+                    // Check if obstacle just passed the bird (for speed progression)
+                    if (!obstacle.passed && obstacle.x + obstacle.width < this.bird.x) {
+                        obstacle.passed = true;
+                        this.obstaclesPassed++;
+                        this.calculateSpeed();
+                    }
+                });
+                
+                // Update flowers
+                this.flowers.forEach(flower => {
+                    flower.x -= currentSpeed;
+                    
+                    // Add floating animation to flowers
+                    flower.floatOffset = Math.sin(Date.now() * 0.005 + flower.phase) * 5;
+                });
+                
+                // Remove off-screen elements
+                this.obstacles = this.obstacles.filter(obstacle => obstacle.x + this.obstacleWidth > 0);
+                this.flowers = this.flowers.filter(flower => flower.x + flower.size > 0);
+            }
+            
+            spawnElements() {
+                const currentTime = Date.now();
+                // Decrease spawn interval slightly as speed increases (more challenging)
+                const adjustedInterval = this.elementInterval - (this.currentSpeedMultiplier - 1) * 200;
+                
+                if (currentTime - this.lastElementTime > adjustedInterval) {
+                    // Create a sequence with mostly flowers and few obstacles
+                    const sequenceLength = 4 + Math.floor(Math.random() * 3); // 4-6 elements per sequence
+                    const baseX = this.canvas.width;
+                    const spacing = 70; // Slightly tighter spacing for more elements
+                    
+                    let obstacleCount = 0;
+                    const maxObstacles = 1 + Math.floor(Math.random() * 2); // 1-2 obstacles max per sequence
+                    
+                    for (let i = 0; i < sequenceLength; i++) {
+                        const elementX = baseX + (i * spacing);
+                        
+                        // Force obstacles to be limited to 1-2 per sequence
+                        const shouldSpawnObstacle = obstacleCount < maxObstacles && Math.random() < 0.3; // 30% chance, but limited
+                        
+                        if (shouldSpawnObstacle) {
+                            // Spawn obstacle with varying height
+                            const obstacleHeight = 100 + Math.random() * 120; // 100-220px height (variable)
+                            this.obstacles.push({
+                                x: elementX,
+                                y: 0, // Start from top
+                                width: this.obstacleWidth,
+                                height: obstacleHeight,
+                                passed: false // Track if bird has passed this obstacle
+                            });
+                            obstacleCount++;
+                        } else {
+                            // Spawn flower with random type based on probability
+                            const flowerType = this.selectFlowerType();
+                            const flowerConfig = this.flowerTypes[flowerType];
+                            
+                            let flowerY;
+                            const heightChoice = Math.random();
+                            
+                            if (heightChoice < 0.4) {
+                                // Top area flowers (more challenging)
+                                flowerY = 50 + Math.random() * 80; // 50-130px from top
+                            } else {
+                                // Middle area flowers (safer)
+                                flowerY = 200 + Math.random() * 120; // 200-320px from top
+                            }
+                            
+                            this.flowers.push({
+                                x: elementX + 15, // Center in the space
+                                y: flowerY,
+                                size: flowerConfig.size,
+                                type: flowerType,
+                                points: flowerConfig.points,
+                                energy: flowerConfig.energy,
+                                collected: false,
+                                phase: Math.random() * Math.PI * 2,
+                                floatOffset: 0
+                            });
+                        }
+                    }
+                    
+                    this.lastElementTime = currentTime;
+                }
+            }
+            
+            selectFlowerType() {
+                const rand = Math.random();
+                let cumulativeProbability = 0;
+                
+                for (const [type, config] of Object.entries(this.flowerTypes)) {
+                    cumulativeProbability += config.probability;
+                    if (rand <= cumulativeProbability) {
+                        return type;
+                    }
+                }
+                
+                return 'small'; // fallback
+            }
+            
+            checkCollisions() {
+                // Check collision with top obstacles
+                this.obstacles.forEach(obstacle => {
+                    if (this.bird.x < obstacle.x + obstacle.width &&
+                        this.bird.x + this.bird.width > obstacle.x &&
+                        this.bird.y < obstacle.y + obstacle.height &&
+                        this.bird.y + this.bird.height > obstacle.y) {
+                        this.gameOver();
+                    }
+                });
+                
+                // Check collision with flowers (collection)
+                this.flowers.forEach(flower => {
+                    if (!flower.collected &&
+                        this.bird.x < flower.x + flower.size &&
+                        this.bird.x + this.bird.width > flower.x &&
+                        this.bird.y < flower.y + flower.floatOffset + flower.size &&
+                        this.bird.y + this.bird.height > flower.y + flower.floatOffset) {
+                        
+                        flower.collected = true;
+                        this.score += flower.points;
+                        
+                        // Restore bird's lifetime when collecting flower
+                        this.bird.lifetime = Math.min(this.bird.maxLifetime, this.bird.lifetime + flower.energy);
+                        
+                        this.updateScore();
+                        this.updateLifetimeDisplay();
+                        
+                        // Show score popup
+                        this.createScorePopup(flower.x, flower.y + flower.floatOffset, flower.points);
+                        
+                        // Visual feedback for collection
+                        this.createSparkleEffect(flower.x, flower.y + flower.floatOffset);
+                    }
+                });
+                
+                // Remove collected flowers
+                this.flowers = this.flowers.filter(flower => !flower.collected);
+                
+                // Check if bird hits the ground
+                if (this.bird.y > this.canvas.height - this.bird.height - 20) { // 20px for ground
+                    this.gameOver();
+                }
+            }
+            
+            createScorePopup(x, y, points) {
+                const popup = document.createElement('div');
+                popup.className = 'score-popup';
+                popup.textContent = `+${points}`;
+                popup.style.left = x + 'px';
+                popup.style.top = y + 'px';
+                
+                const container = document.querySelector('.game-container');
+                container.appendChild(popup);
+                
+                // Remove popup after animation
+                setTimeout(() => {
+                    if (popup.parentNode) {
+                        popup.parentNode.removeChild(popup);
+                    }
+                }, 1000);
+            }
+            
+            draw() {
+                // Clear canvas with sky background
+                this.ctx.fillStyle = 'linear-gradient(180deg, #87CEEB 0%, #90EE90 100%)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Alternative: create gradient background
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, '#87CEEB');
+                gradient.addColorStop(1, '#90EE90');
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw fancy bird
+                this.drawFancyBird();
+                
+                // Draw top obstacles and flowers
+                if (!this.waitingForFirstInput) {
+                    this.obstacles.forEach(obstacle => {
+                        this.drawTopObstacle(obstacle);
+                    });
+                    
+                    // Draw flowers
+                    this.flowers.forEach(flower => {
+                        this.drawFlower(flower);
+                    });
+                }
+                
+                // Draw ground
+                this.ctx.fillStyle = '#8B4513';
+                this.ctx.fillRect(0, this.canvas.height - 20, this.canvas.width, 20);
+            }
+            
+            drawFancyBird() {
+                this.ctx.save();
+                this.ctx.translate(this.bird.x + this.bird.width/2, this.bird.y + this.bird.height/2);
+                this.ctx.rotate(this.bird.rotation);
+                
+                const time = Date.now() * 0.01; // For animation
+                const wingFlap = Math.sin(time * 0.5) * 0.3; // Wing flapping animation
+                
+                // Bird shadow
+                this.ctx.save();
+                this.ctx.translate(2, 2);
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(0, 0, this.bird.width/2, this.bird.height/2, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.restore();
+                
+                // Bird body (main oval)
+                const bodyGradient = this.ctx.createRadialGradient(-5, -5, 0, 0, 0, this.bird.width/2);
+                bodyGradient.addColorStop(0, '#FFD700'); // Gold
+                bodyGradient.addColorStop(0.6, '#FFA500'); // Orange
+                bodyGradient.addColorStop(1, '#FF8C00'); // Dark orange
+                this.ctx.fillStyle = bodyGradient;
+                this.ctx.beginPath();
+                this.ctx.ellipse(0, 0, this.bird.width/2, this.bird.height/2, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Body outline
+                this.ctx.strokeStyle = '#FF6347';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                // Wing (animated)
+                this.ctx.save();
+                this.ctx.translate(-8, -2);
+                this.ctx.rotate(wingFlap);
+                const wingGradient = this.ctx.createLinearGradient(0, -10, 0, 10);
+                wingGradient.addColorStop(0, '#FF6B6B');
+                wingGradient.addColorStop(0.5, '#FF8E53');
+                wingGradient.addColorStop(1, '#FF6B9D');
+                this.ctx.fillStyle = wingGradient;
+                this.ctx.beginPath();
+                this.ctx.ellipse(0, 0, 12, 8, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#FF4757';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+                this.ctx.restore();
+                
+                // Tail feathers
+                this.ctx.fillStyle = '#FF6B6B';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-this.bird.width/2, 0);
+                this.ctx.lineTo(-this.bird.width/2 - 8, -6);
+                this.ctx.lineTo(-this.bird.width/2 - 6, 0);
+                this.ctx.lineTo(-this.bird.width/2 - 8, 6);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#FF4757';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+                
+                // Beak
+                this.ctx.fillStyle = '#FF8C00';
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.bird.width/2, 0);
+                this.ctx.lineTo(this.bird.width/2 + 12, -2);
+                this.ctx.lineTo(this.bird.width/2 + 10, 4);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#FF6347';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+                
+                // Eye (main)
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.beginPath();
+                this.ctx.ellipse(8, -5, 8, 6, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#000';
+                this.ctx.lineWidth = 1;
+                this.ctx.stroke();
+                
+                // Eye pupil
+                this.ctx.fillStyle = '#000000';
+                this.ctx.beginPath();
+                this.ctx.ellipse(10, -4, 4, 4, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Eye shine
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.beginPath();
+                this.ctx.ellipse(12, -6, 2, 2, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Eyebrow (angry bird style)
+                this.ctx.strokeStyle = '#FF4757';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(4, -12);
+                this.ctx.lineTo(12, -8);
+                this.ctx.stroke();
+                
+                // Chest marking
+                this.ctx.fillStyle = '#FFEB3B';
+                this.ctx.beginPath();
+                this.ctx.ellipse(0, 8, 8, 6, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Small decorative feathers on head
+                this.ctx.fillStyle = '#FF6B6B';
+                this.ctx.beginPath();
+                this.ctx.moveTo(-2, -this.bird.height/2);
+                this.ctx.lineTo(-5, -this.bird.height/2 - 6);
+                this.ctx.lineTo(1, -this.bird.height/2 - 4);
+                this.ctx.lineTo(4, -this.bird.height/2 - 8);
+                this.ctx.lineTo(0, -this.bird.height/2);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                this.ctx.restore();
+            }
+            
+            drawTopObstacle(obstacle) {
+                // Draw main obstacle body with gradient
+                const gradient = this.ctx.createLinearGradient(obstacle.x, obstacle.y, obstacle.x, obstacle.y + obstacle.height);
+                gradient.addColorStop(0, '#2C3E50');
+                gradient.addColorStop(0.5, '#34495E');
+                gradient.addColorStop(1, '#1A252F');
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                
+                // Add texture lines
+                this.ctx.strokeStyle = '#1A252F';
+                this.ctx.lineWidth = 2;
+                for (let i = 0; i < 3; i++) {
+                    const lineY = obstacle.y + (obstacle.height / 4) * (i + 1);
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(obstacle.x, lineY);
+                    this.ctx.lineTo(obstacle.x + obstacle.width, lineY);
+                    this.ctx.stroke();
+                }
+                
+                // Draw spikes at the bottom of the obstacle
+                const spikeWidth = 15;
+                const spikeCount = Math.floor(obstacle.width / spikeWidth);
+                const spikeHeight = 20;
+                
+                this.ctx.fillStyle = '#34495E';
+                for (let i = 0; i < spikeCount; i++) {
+                    const spikeX = obstacle.x + (i * spikeWidth);
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(spikeX, obstacle.y + obstacle.height);
+                    this.ctx.lineTo(spikeX + spikeWidth/2, obstacle.y + obstacle.height + spikeHeight);
+                    this.ctx.lineTo(spikeX + spikeWidth, obstacle.y + obstacle.height);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    
+                    // Spike outline
+                    this.ctx.strokeStyle = '#2C3E50';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                }
+                
+                // Add highlight on top edge
+                this.ctx.strokeStyle = '#5D6D7E';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(obstacle.x, obstacle.y);
+                this.ctx.lineTo(obstacle.x + obstacle.width, obstacle.y);
+                this.ctx.stroke();
+                
+                // Side borders
+                this.ctx.strokeStyle = '#2C3E50';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            }
+            
+            drawFlower(flower) {
+                const x = flower.x + flower.size/2;
+                const y = flower.y + flower.floatOffset + flower.size/2;
+                const size = flower.size/2;
+                
+                this.ctx.save();
+                this.ctx.translate(x, y);
+                
+                // Gentle rotation for natural movement
+                const rotation = Math.sin(Date.now() * 0.002 + flower.phase) * 0.3;
+                this.ctx.rotate(rotation);
+                
+                // Draw flower petals (5 petals)
+                const petalCount = 5;
+                const petalSize = size * 0.8;
+                
+                // Different colors based on flower type
+                let petalColors;
+                switch (flower.type) {
+                    case 'small':
+                        petalColors = ['#FFB6C1', '#FF69B4', '#FF1493']; // Light pink
+                        break;
+                    case 'medium':
+                        petalColors = ['#FF1493', '#DC143C', '#B22222']; // Deep pink/red
+                        break;
+                    case 'large':
+                        petalColors = ['#8A2BE2', '#4B0082', '#2F0B69']; // Purple
+                        break;
+                }
+                
+                for (let i = 0; i < petalCount; i++) {
+                    const angle = (i / petalCount) * Math.PI * 2;
+                    const petalX = Math.cos(angle) * (size * 0.4);
+                    const petalY = Math.sin(angle) * (size * 0.4);
+                    
+                    this.ctx.save();
+                    this.ctx.translate(petalX, petalY);
+                    this.ctx.rotate(angle);
+                    
+                    // Petal gradient
+                    const petalGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, petalSize);
+                    petalGradient.addColorStop(0, petalColors[0]);
+                    petalGradient.addColorStop(0.6, petalColors[1]);
+                    petalGradient.addColorStop(1, petalColors[2]);
+                    
+                    this.ctx.fillStyle = petalGradient;
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(0, 0, petalSize, petalSize * 0.6, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Petal outline
+                    this.ctx.strokeStyle = petalColors[2];
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                    
+                    this.ctx.restore();
+                }
+                
+                // Draw flower center
+                const centerGradient = this.ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.3);
+                centerGradient.addColorStop(0, '#FFFF00'); // Yellow center
+                centerGradient.addColorStop(0.7, '#FFA500'); // Orange
+                centerGradient.addColorStop(1, '#FF8C00'); // Dark orange
+                
+                this.ctx.fillStyle = centerGradient;
+                this.ctx.beginPath();
+                this.ctx.arc(0, 0, size * 0.3, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Center outline
+                this.ctx.strokeStyle = '#FF6347';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+                
+                // Add small dots in center for texture
+                this.ctx.fillStyle = '#FF4500';
+                for (let i = 0; i < 3; i++) {
+                    const dotAngle = (i / 3) * Math.PI * 2;
+                    const dotX = Math.cos(dotAngle) * (size * 0.15);
+                    const dotY = Math.sin(dotAngle) * (size * 0.15);
+                    this.ctx.beginPath();
+                    this.ctx.arc(dotX, dotY, 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                // Add sparkle effect based on flower type
+                this.ctx.fillStyle = '#FFFFFF';
+                const sparkleSize = flower.type === 'large' ? 3 : flower.type === 'medium' ? 2 : 1;
+                this.ctx.beginPath();
+                this.ctx.arc(-size/3, -size/3, sparkleSize, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.restore();
+            }
+            
+            createSparkleEffect(x, y) {
+                // Simple sparkle effect for flower collection
+                console.log(`Flower collected at ${x}, ${y}!`);
+            }
+            
+            updateScore() {
+                this.elements.scoreValue.textContent = this.score;
+            }
+            
+            updateLifetimeDisplay() {
+                const percentage = Math.max(0, (this.bird.lifetime / this.bird.maxLifetime) * 100);
+                this.elements.lifetimeFill.style.width = percentage + '%';
+                this.elements.lifetimeText.textContent = Math.round(percentage) + '%';
+                
+                // Change color based on lifetime level
+                if (percentage > 60) {
+                    this.elements.lifetimeFill.style.background = 'linear-gradient(90deg, #2ed573 0%, #26d0ce 100%)';
+                } else if (percentage > 30) {
+                    this.elements.lifetimeFill.style.background = 'linear-gradient(90deg, #ffa502 0%, #ff6348 100%)';
+                } else {
+                    this.elements.lifetimeFill.style.background = 'linear-gradient(90deg, #ff4757 0%, #c44569 100%)';
+                }
+            }
+            
+            updateHighScore() {
+                this.elements.highScoreValue.textContent = this.highScore;
+            }
+            
+            gameOver() {
+                this.gameState = 'gameOver';
+                this.waitingForFirstInput = false; // Reset waiting state
+                this.elements.waitingIndicator.classList.add('hidden');
+                
+                // Stop audio recording
+                if (this.useVoiceControl) {
+                    this.stopAudioRecording();
+                }
+                
+                // Check for new high score
+                const isNewRecord = this.score > this.highScore;
+                if (isNewRecord) {
+                    this.highScore = this.score;
+                    localStorage.setItem('voiceFlappyHighScore', this.highScore);
+                    this.updateHighScore();
+                    this.elements.newRecord.classList.remove('hidden');
+                } else {
+                    this.elements.newRecord.classList.add('hidden');
+                }
+                
+                this.elements.finalScore.textContent = this.score;
+                this.elements.maxSpeed.textContent = this.maxSpeedReached.toFixed(1) + 'x';
+                
+                // Show/hide audio playback section based on whether we have audio
+                if (this.useVoiceControl && this.gameAudioBlob) {
+                    this.elements.audioPlayback.style.display = 'block';
+                } else {
+                    this.elements.audioPlayback.style.display = 'none';
+                }
+                
+                this.elements.gameOverScreen.classList.remove('hidden');
+                
+                // Stop audio processing
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.isListening = false;
+                }
+            }
+            
+            restartGame() {
+                this.elements.gameOverScreen.classList.add('hidden');
+                this.startGame(this.useVoiceControl);
+            }
+            
+            showStartScreen() {
+                this.elements.gameOverScreen.classList.add('hidden');
+                this.elements.startScreen.classList.remove('hidden');
+                this.gameState = 'menu';
+                this.waitingForFirstInput = false;
+                this.elements.waitingIndicator.classList.add('hidden');
+                
+                // Clean up any existing audio blob
+                if (this.gameAudioBlob) {
+                    URL.revokeObjectURL(this.gameAudioBlob);
+                    this.gameAudioBlob = null;
+                }
+            }
+            
+            startAudioRecording(stream) {
+                try {
+                    this.mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm'
+                    });
+                    
+                    this.audioChunks = [];
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            this.audioChunks.push(event.data);
+                        }
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        this.gameAudioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    };
+                    
+                    this.mediaRecorder.start(100); // Record in 100ms chunks
+                    this.isRecording = true;
+                    
+                } catch (error) {
+                    console.error('Error starting audio recording:', error);
+                }
+            }
+            
+            stopAudioRecording() {
+                if (this.mediaRecorder && this.isRecording) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                }
+            }
+            
+            playGameAudio() {
+                if (this.gameAudioBlob) {
+                    const audioUrl = URL.createObjectURL(this.gameAudioBlob);
+                    const audio = new Audio(audioUrl);
+                    
+                    // Update button text during playback
+                    this.elements.playAudioBtn.textContent = '🔊 Playing...';
+                    this.elements.playAudioBtn.disabled = true;
+                    
+                    audio.play().catch(error => {
+                        console.error('Error playing audio:', error);
+                        alert('Could not play audio. Please try again.');
+                    });
+                    
+                    audio.onended = () => {
+                        this.elements.playAudioBtn.textContent = '▶️ Play Recording';
+                        this.elements.playAudioBtn.disabled = false;
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                    
+                    audio.onerror = () => {
+                        this.elements.playAudioBtn.textContent = '▶️ Play Recording';
+                        this.elements.playAudioBtn.disabled = false;
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                } else {
+                    alert('No audio recording available.');
+                }
+            }
+            
+            downloadGameAudio() {
+                if (this.gameAudioBlob) {
+                    const audioUrl = URL.createObjectURL(this.gameAudioBlob);
+                    const a = document.createElement('a');
+                    a.href = audioUrl;
+                    a.download = `flappy-bird-voice-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.webm`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(audioUrl);
+                } else {
+                    alert('No audio recording available to download.');
+                }
+            }
+        }
+        
+        // Initialize game
+        const game = new VoiceFlappyBird();
+    </script>
+</body>
+</html>
