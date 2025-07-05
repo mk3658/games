@@ -15,6 +15,27 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
+            /* Disable text selection */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            /* Disable drag */
+            -webkit-user-drag: none;
+            -khtml-user-drag: none;
+            -moz-user-drag: none;
+            -o-user-drag: none;
+            user-drag: none;
+        }
+        
+        /* Disable highlighting for all elements */
+        * {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .game-container {
@@ -420,10 +441,10 @@
         <div class="start-screen" id="startScreen">
             <h2 style="font-size: 35px;">🐦 Voice Flappy Bird</h2>
             <p>Navigate through obstacles and collect flowers!</p>
-            <div style="margin: 5px;">
+            <div style="margin: 5px">
                 <button onclick="game.startGame(false)">🎮 Play with Click</button>
             </div>
-            <div style="margin: 5px;">
+            <div style="margin: 5px">
                 <button onclick="game.startGame(true)">🎤 Play with Voice</button>
             </div>
             <button class="help-btn" onclick="game.showInstructions()">❓ How to Play</button>
@@ -491,6 +512,60 @@
     </div>
 
     <script>
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Disable common developer shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
+            if (e.keyCode === 123 || // F12
+                (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+                (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+                (e.ctrlKey && e.keyCode === 85) || // Ctrl+U
+                (e.ctrlKey && e.shiftKey && e.keyCode === 67)) { // Ctrl+Shift+C
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Disable text selection
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Clear console periodically
+        setInterval(function() {
+            console.clear();
+        }, 1000);
+
+        // Detect if DevTools is open (basic detection)
+        let devtools = {
+            open: false,
+            orientation: null
+        };
+        
+        setInterval(function() {
+            if (window.outerHeight - window.innerHeight > 200 || window.outerWidth - window.innerWidth > 200) {
+                if (!devtools.open) {
+                    devtools.open = true;
+                    console.log('DevTools detected!');
+                    // Optionally redirect or show warning
+                    // window.location.href = 'about:blank';
+                }
+            } else {
+                devtools.open = false;
+            }
+        }, 500);
+
+        // Obfuscate some critical variables (basic obfuscation)
+        const _0x1a2b = 'score';
+        const _0x3c4d = 'gameState';
+        const _0x5e6f = 'bird';
+
         class VoiceFlappyBird {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
