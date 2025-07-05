@@ -502,9 +502,9 @@
             <p>Max Speed: <span id="maxSpeed">1.0x</span></p>
             <p id="newRecord" class="hidden">🎉 New High Score!</p>
             <div class="audio-playback" id="audioPlayback" style="margin: 20px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; border: 2px solid rgba(255,255,255,0.3);">
-                <p style="margin: 10px 0;">🎵 Listen to your voice commands from this game:</p>
-                <button onclick="game.playGameAudio()" id="playAudioBtn" class="play-btn" style="background: linear-gradient(45deg, #48dbfb, #0abde3); margin: 5px;">▶️ Play Recording</button>
-                <button onclick="game.downloadGameAudio()" id="downloadAudioBtn" class="play-btn" style="background: linear-gradient(45deg, #feca57, #ff9ff3); margin: 5px;">⬇️ Download</button>
+                <p style="margin: 10px 0;">🎵 Listen to your voice command:</p>
+                <p style="margin: 10px 0;"><button onclick="game.playGameAudio()" id="playAudioBtn" class="play-btn" style="background: linear-gradient(45deg, #48dbfb, #0abde3); margin: 5px;">▶️ Play Recording</button></p>
+                <p><button onclick="game.downloadGameAudio()" id="downloadAudioBtn" class="play-btn" style="background: linear-gradient(45deg, #feca57, #ff9ff3); margin: 5px;">⬇️ Download</button>
             </div>
             <button onclick="game.restartGame()">🔄 Play Again</button>
             <button onclick="game.showStartScreen()">📋 Main Menu</button>
@@ -576,10 +576,10 @@
                 this.microphone = null;
                 this.dataArray = null;
                 this.isListening = false;
-                this.voiceThreshold = 60;
+                this.voiceThreshold = 30; // Minimum volume threshold from 60 to 30 to detect voice
                 this.voiceDetected = false;
                 this.lastVoiceTime = 0;
-                this.voiceCooldown = 300; // Minimum time between voice commands (ms)
+                this.voiceCooldown = 400; // Minimum time between voice commands (ms)
                 
                 // Audio recording for playback
                 this.mediaRecorder = null;
@@ -1422,6 +1422,7 @@
                 // Stop audio recording
                 if (this.useVoiceControl) {
                     this.stopAudioRecording();
+                    this.elements.audioPlayback.style.display = 'block';
                 }
                 
                 // Check for new high score
@@ -1439,11 +1440,11 @@
                 this.elements.maxSpeed.textContent = this.maxSpeedReached.toFixed(1) + 'x';
                 
                 // Show/hide audio playback section based on whether we have audio
-                if (this.useVoiceControl && this.gameAudioBlob) {
-                    this.elements.audioPlayback.style.display = 'block';
-                } else {
-                    this.elements.audioPlayback.style.display = 'none';
-                }
+                // if (this.useVoiceControl && this.gameAudioBlob) {
+                //     this.elements.audioPlayback.style.display = 'block';
+                // } else {
+                //     this.elements.audioPlayback.style.display = 'none';
+                // }
                 
                 this.elements.gameOverScreen.classList.remove('hidden');
                 
