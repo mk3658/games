@@ -929,11 +929,6 @@
                     <div class="info-value" id="gamesPlayed">0</div>
                 </div>
             </div>
-        
-        <!-- <div class="instructions">
-            Click the microphone and blow gently into your device.<br>
-            Keep the balloon inflated as long as possible without popping it!
-        </div> -->
     </div>
 
     <!-- Welcome Popup -->
@@ -1148,14 +1143,12 @@
                         audio: {
                             echoCancellation: false,
                             noiseSuppression: false,
-                            autoGainControl: false,
-                            sampleRate: 44100
+                            autoGainControl: false
                         } 
                     });
                     
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                        sampleRate: 44100
-                    });
+                    // Create audio context without forcing sample rate
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     this.analyser = this.audioContext.createAnalyser();
                     this.microphone = this.audioContext.createMediaStreamSource(stream);
                     
