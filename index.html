@@ -1251,7 +1251,7 @@
                 const average = sum / voiceRange;
                 const volume = Math.min(100, Math.max(average, maxValue * 0.7) / 255 * 100);
 
-                if (volume > 40) {
+                if (volume > 65) {
                     if (!this.hasExceededThreshold) {
                         // First time exceeding threshold - start the timer
                         this.gameStartTime = Date.now();
