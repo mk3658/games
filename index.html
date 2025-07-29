@@ -1188,23 +1188,39 @@
                         this.gameTime = (Date.now() - this.gameStartTime) / 1000; // Convert to seconds
                     }
                     
-                    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-                        this.mediaRecorder.stop();
-                        this.mediaRecorder.addEventListener('stop', () => {
-                            const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-                            this.downloadButton.style.display = 'block';
-                            this.downloadButton.onclick = () => {
-                                const url = URL.createObjectURL(audioBlob);
-                                const a = document.createElement('a');
-                                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                                a.href = url;
-                                a.download = `balloon-game-recording-${timestamp}.webm`;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                URL.revokeObjectURL(url);
+                    if (this.mediaRecorder) {
+                        // Only stop if currently recording
+                        if (this.mediaRecorder.state === 'recording') {
+                            // Remove any existing stop event listeners
+                            this.mediaRecorder.removeEventListener('stop', this.handleRecordingStop);
+                            
+                            // Create new handler for this recording
+                            this.handleRecordingStop = () => {
+                                if (this.audioChunks.length > 0) {  // Only show button if we have audio data
+                                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                                    this.downloadButton.style.display = 'block';
+                                    this.downloadButton.onclick = () => {
+                                        const url = URL.createObjectURL(audioBlob);
+                                        const a = document.createElement('a');
+                                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                                        a.href = url;
+                                        a.download = `balloon-game-recording-${timestamp}.webm`;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                        URL.revokeObjectURL(url);
+                                    };
+                                } else {
+                                    this.downloadButton.style.display = 'none';
+                                }
                             };
-                        });
+                            
+                            // Add the new handler
+                            this.mediaRecorder.addEventListener('stop', this.handleRecordingStop);
+                            this.mediaRecorder.stop();
+                        } else {
+                            this.downloadButton.style.display = 'none';
+                        }
                     }
                     
                     if (this.microphone) {
