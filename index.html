@@ -1160,7 +1160,7 @@
                     this.mediaRecorder.addEventListener('dataavailable', event => {
                         this.audioChunks.push(event.data);
                     });
-                    this.mediaRecorder.start();
+                    // this.mediaRecorder.start();
                     
                     this.analyser.fftSize = 2048; // Increased for better frequency resolution
                     this.analyser.smoothingTimeConstant = 0.3; // Reduced for more responsive detection
@@ -1285,6 +1285,7 @@
                         // We've maintained "ahhh" for long enough - start the game
                         this.hasExceededThreshold = true;
                         this.gameStartTime = Date.now();
+                        this.mediaRecorder.start();
                         this.showStatusMessage('🎈 Game Started! Keep saying "Ahhhhh"!');
                     }
                     
