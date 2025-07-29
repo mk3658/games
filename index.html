@@ -984,6 +984,8 @@
                 this.balloonSize = 40;
                 this.maxSize = 300;
                 this.minSize = 40;
+                this.startDetectionTime = 0; // Track when we first detect "ahhh"
+                this.requiredAhhhDuration = 500; // Required duration in ms to start game
                 this.gameTime = 0;
                 this.hasExceededThreshold = false; // Track if volume has exceeded threshold
                 this.gameStartTime = 0;
@@ -1237,41 +1239,80 @@
                 const dataArray = new Uint8Array(bufferLength);
                 this.analyser.getByteFrequencyData(dataArray);
                 
-                // Focus on lower frequencies where voice is strongest (0-2000Hz)
-                const voiceRange = Math.floor(bufferLength * 0.1); // First 10% of frequency range
+                // Calculate frequency resolution (Hz per bin)
+                const sampleRate = this.audioContext.sampleRate;
+                const frequencyBinSize = sampleRate / (this.analyser.fftSize);
+                
+                // Focus specifically on "ahhh" frequency range (approximately 100-400 Hz)
+                const startBin = Math.floor(100 / frequencyBinSize);
+                const endBin = Math.floor(400 / frequencyBinSize);
+                
                 let sum = 0;
                 let maxValue = 0;
+                let consistentFrequencyCount = 0;
+                let isAhSound = false;
                 
-                for (let i = 0; i < voiceRange; i++) {
-                    sum += dataArray[i];
-                    maxValue = Math.max(maxValue, dataArray[i]);
+                // Analyze the specific frequency range for "ahhh" sound
+                for (let i = startBin; i < endBin; i++) {
+                    const amplitude = dataArray[i];
+                    sum += amplitude;
+                    maxValue = Math.max(maxValue, amplitude);
+                    
+                    // Check for consistent energy in the frequency range typical for "ahhh"
+                    // Require stronger and more consistent signal
+                    if (amplitude > 120) {
+                        consistentFrequencyCount++;
+                    }
                 }
                 
-                // Use both average and peak detection for better voice recognition
-                const average = sum / voiceRange;
-                const volume = Math.min(100, Math.max(average, maxValue * 0.7) / 255 * 100);
+                // Calculate volume with stricter emphasis on sustained "ahhh" sounds
+                const average = sum / (endBin - startBin);
+                const consistencyFactor = consistentFrequencyCount / (endBin - startBin);
+                // Reduce overall volume sensitivity and require more consistency
+                const volume = Math.min(100, (average * Math.pow(consistencyFactor, 2) * 1.2) / 255 * 100);
+                
+                // Make "ahhh" sound detection more strict
+                isAhSound = consistencyFactor > 0.6 && volume > 40;
 
-                if (volume > 65) {
-                    if (!this.hasExceededThreshold) {
-                        // First time exceeding threshold - start the timer
+                // Detect a strong and consistent "ahhh" sound
+                if (consistencyFactor > 0.6 && volume > 40) {
+                    if (!this.startDetectionTime) {
+                        // First time detecting "ahhh" - start counting
+                        this.startDetectionTime = Date.now();
+                        this.showStatusMessage('🎤 Keep saying "Ahhhhh"...');
+                    } else if (!this.hasExceededThreshold && 
+                              (Date.now() - this.startDetectionTime) >= this.requiredAhhhDuration) {
+                        // We've maintained "ahhh" for long enough - start the game
+                        this.hasExceededThreshold = true;
                         this.gameStartTime = Date.now();
-                        this.showStatusMessage('🎈 Game Started! Keep going!');
+                        this.showStatusMessage('🎈 Game Started! Keep saying "Ahhhhh"!');
                     }
-                    this.hasExceededThreshold = true;
-                    this.updateVolumeMeter(volume);
-                    this.updateBalloon(volume);
-                    this.updateGameTime();
-                    this.updateDisplay();
-                } else if (this.hasExceededThreshold) {
-                    // Only end the game if we previously exceeded the threshold
-                    this.updateVolumeMeter(0);
-                    this.stopListening(); // This will save the game and show game over panel
-                    return; // Exit the analyze loop
+                    
+                    if (this.hasExceededThreshold) {
+                        // Only update the game once we've properly started
+                        this.updateVolumeMeter(volume);
+                        this.updateBalloon(volume, consistencyFactor);
+                        this.updateGameTime();
+                        this.updateDisplay();
+                    } else {
+                        // Show progress while we're waiting for the initial "ahhh"
+                        this.updateVolumeMeter(volume * 0.5); // Show partial volume while warming up
+                    }
                 } else {
-                    // Initial state or volume hasn't exceeded threshold yet
-                    this.updateVolumeMeter(0);
-                    this.updateGameTime(); // Update time display
-                    this.updateDisplay(); // Update the display with current time
+                    // Reset the start detection if they stop making the sound
+                    this.startDetectionTime = 0;
+                    if (this.hasExceededThreshold) {
+                        // Only end the game if we've actually started
+                        this.updateVolumeMeter(0);
+                        this.stopListening(); // This will save the game and show game over panel
+                        return; // Exit the analyze loop
+                    } else {
+                        // Reset detection time and visual feedback when not making the sound
+                        this.startDetectionTime = 0;
+                        this.updateVolumeMeter(0);
+                        this.updateGameTime(); // Update time display
+                        this.updateDisplay(); // Update the display with current time
+                    }
                 }
                 if (this.isGameActive) {
                     requestAnimationFrame(() => this.analyze());
@@ -1282,21 +1323,25 @@
                 this.volumeFill.style.width = `${volume}%`;
             }
             
-            updateBalloon(volume) {
-                // Lower threshold and increased sensitivity for voice detection
-                if (volume > 5) { // Lowered threshold from 8 to 5 for voice
-                    const inflationRate = Math.pow(volume / 100, 1.5) * 0.7; // Increased rate for faster inflation
+            updateBalloon(volume, consistencyFactor) {
+                // Calculate how "ahhh-like" the sound is based on frequency consistency
+                const ahhhQuality = Math.min(1, consistencyFactor * 1.5);
+                
+                // Only inflate if we have a strong and consistent "ahhh" sound
+                if (volume > 40 && consistencyFactor > 0.6) {
+                    // Inflation rate now depends more heavily on sound quality
+                    const inflationRate = Math.pow(volume / 100, 1.2) * Math.pow(ahhhQuality, 2) * 0.6;
                     this.balloonSize = Math.min(this.maxSize, this.balloonSize + inflationRate);
                     
                     // Update status message when actively inflating
-                    if (volume > 15) {
-                        const currentTime = this.gameStartTime > 0 ? ((Date.now() - this.gameStartTime) / 1000).toFixed(1) : '0.0';
-                        this.showStatusMessage(`🎈 Great! Keep going! Time: ${currentTime}s`);
-                    }
+                    const currentTime = this.gameStartTime > 0 ? ((Date.now() - this.gameStartTime) / 1000).toFixed(1) : '0.0';
+                    this.showStatusMessage(`🎈 Perfect "Ahhhhh"! Keep going! Time: ${currentTime}s`);
                 } else {
-                    // Gradual deflation when not making sound
-                    this.balloonSize = Math.max(this.minSize, this.balloonSize - 20);
-                    console.log(`Deflating balloon - Current Size: ${this.balloonSize}px`);
+                    // Gradual deflation when not making an "ahhh" sound
+                    this.balloonSize = Math.max(this.minSize, this.balloonSize - 15);
+                    if (this.balloonSize > this.minSize) {
+                        console.log(`Deflating balloon - Current Size: ${this.balloonSize}px`);
+                    }
                 }
                 
                 // Update balloon appearance
@@ -1466,6 +1511,7 @@
                 this.gameTime = 0;
                 this.gameStartTime = 0;
                 this.hasExceededThreshold = false;
+                this.startDetectionTime = 0;
                 this.balloon.classList.remove('pop-animation', 'danger');
                 this.audioChunks = [];
                 this.downloadButton.style.display = 'none';
